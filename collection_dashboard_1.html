@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collection Dashboard — Appier Inc</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#ffffff;--bg2:#f5f5f4;--bg3:#eeedea;
+  --text:#1a1a18;--text2:#6b6b67;--text3:#9e9d99;
+  --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.25);
+  --teal:#1D9E75;--blue:#378ADD;--purple:#534AB7;--amber:#BA7517;--coral:#D85A30;
+  --r-md:8px;--r-lg:12px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1c1c1a;--bg2:#262624;--bg3:#2e2e2b;
+  --text:#f0efea;--text2:#a09f9b;--text3:#6b6a67;
+  --border:rgba(255,255,255,0.12);--border2:rgba(255,255,255,0.28);
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
+.topbar{background:var(--bg);border-bottom:0.5px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;gap:12px}
+.topbar-left{display:flex;align-items:center;gap:14px;min-width:0}
+.logo{font-size:15px;font-weight:600;white-space:nowrap}.logo span{color:var(--blue)}
+.sync-status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--teal);flex-shrink:0}
+.dot.loading{background:var(--amber);animation:pulse 1s infinite}
+.dot.err{background:var(--coral)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.sync-btn{font-size:13px;padding:7px 16px;border-radius:var(--r-md);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0;transition:background .15s}
+.sync-btn:hover{background:var(--bg2)}.sync-btn:disabled{opacity:.45;cursor:not-allowed}
+.spin{animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wrap{max-width:1140px;margin:0 auto;padding:24px 24px 56px}
+.err-box{background:#FAECE7;color:#712B13;border-radius:var(--r-md);padding:14px 18px;font-size:13px;margin-bottom:20px;display:none;line-height:1.7;border:0.5px solid rgba(216,90,48,.25)}
+.target-banner{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:16px 22px;margin-bottom:22px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.target-item{display:flex;flex-direction:column;gap:3px}
+.target-label{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.06em;text-transform:uppercase}
+.target-value{font-size:22px;font-weight:600;color:var(--text)}
+.target-sub{font-size:11px;color:var(--text3)}
+.target-divider{width:1px;height:44px;background:var(--border);flex-shrink:0}
+.prog-wrap{flex:1;min-width:200px}
+.prog-label{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px;color:var(--text2)}
+.prog-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;background:var(--teal);transition:width .7s ease}
+.section-label{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:11px}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:26px}
+.metric{background:var(--bg2);border-radius:var(--r-md);padding:16px 18px}
+.metric-label{font-size:12px;color:var(--text2);margin-bottom:5px}
+.metric-value{font-size:22px;font-weight:600}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.c-good{color:#1D9E75}.c-warn{color:#BA7517}.c-danger{color:#D85A30}
+.tabs{display:flex;border-bottom:0.5px solid var(--border);margin-bottom:22px}
+.tab{padding:10px 20px;font-size:13px;cursor:pointer;color:var(--text2);border:none;border-bottom:2px solid transparent;background:none;transition:color .15s}
+.tab:hover{color:var(--text)}.tab.on{color:var(--text);border-bottom-color:var(--text);font-weight:500}
+.pane{display:none}.pane.on{display:block}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+@media(max-width:680px){.chart-row{grid-template-columns:1fr}}
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:16px}
+.card-title{font-size:13px;font-weight:500;margin-bottom:12px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:12px;color:var(--text2)}
+.leg-sq{width:10px;height:10px;border-radius:2px;display:inline-block;vertical-align:middle;margin-right:4px}
+.filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-row select{font-size:13px;padding:6px 12px;border-radius:var(--r-md);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);cursor:pointer}
+.logic-note{background:var(--bg2);border-radius:var(--r-md);padding:10px 14px;font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.7;border-left:3px solid var(--blue)}
+.scroll-table{max-height:400px;overflow-y:auto;border:0.5px solid var(--border);border-radius:var(--r-lg)}
+.scroll-table table{width:100%;border-collapse:collapse;font-size:12px}
+.scroll-table thead th{position:sticky;top:0;background:var(--bg2);padding:8px 12px;font-size:11px;font-weight:600;color:var(--text2);border-bottom:0.5px solid var(--border);text-align:left;white-space:nowrap}
+.scroll-table tbody td{padding:7px 12px;border-bottom:0.5px solid var(--border);white-space:nowrap}
+.scroll-table tbody tr:hover{background:var(--bg2)}
+.scroll-table tbody tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.b-early{background:#E1F5EE;color:#085041}
+.b-late{background:#FAECE7;color:#712B13}
+.b-ontime{background:#E6F1FB;color:#0C447C}
+.b-nodue{background:var(--bg2);color:var(--text2)}
+.empty{text-align:center;padding:28px;color:var(--text2);font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">Appier <span>Collection</span> Dashboard</div>
+    <div class="sync-status">
+      <div class="dot loading" id="statusDot"></div>
+      <span id="statusText">Loading...</span>
+    </div>
+  </div>
+  <button class="sync-btn" id="syncBtn" onclick="loadData()">
+    <svg id="syncIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+      <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+    </svg>
+    Sync Latest Data
+  </button>
+</div>
+
+<div class="wrap">
+  <div class="err-box" id="errBox"></div>
+
+  <div class="target-banner" id="targetBanner" style="display:none">
+    <div class="target-item">
+      <div class="target-label">Collection Month</div>
+      <div class="target-value" id="bannerMonth">—</div>
+    </div>
+    <div class="target-divider"></div>
+    <div class="target-item">
+      <div class="target-label">Total Collected</div>
+      <div class="target-value" id="bannerCollected">—</div>
+      <div class="target-sub" id="bannerAdjNote">—</div>
+    </div>
+    <div class="target-divider"></div>
+    <div class="target-item">
+      <div class="target-label">Collection Target</div>
+      <div class="target-value" id="bannerTarget">—</div>
+    </div>
+    <div class="target-divider"></div>
+    <div class="prog-wrap">
+      <div class="prog-label">
+        <span>Progress · (Collected − Adj) / Target</span>
+        <span id="bannerPct" style="font-weight:600">—</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" id="bannerFill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="section-label">Collection Breakdown</div>
+  <div class="metric-grid" id="metricGrid">
+    <div class="metric"><div class="metric-label">Loading...</div><div class="metric-value" style="font-size:14px;color:var(--text2)">Please wait</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" onclick="switchTab('ov')">Overview</button>
+    <button class="tab" onclick="switchTab('ty')">Product Type</button>
+    <button class="tab" onclick="switchTab('co')">Country</button>
+    <button class="tab" onclick="switchTab('ti')">Payment Timing</button>
+  </div>
+
+  <div class="pane on" id="pane-ov">
+    <div class="chart-row">
+      <div class="card"><div class="card-title">Collections by Product Type (USD)</div><div class="legend" id="lg1"></div><div style="position:relative;height:220px"><canvas id="c1"></canvas></div></div>
+      <div class="card"><div class="card-title">Daily Collection Trend (USD)</div><div style="position:relative;height:240px"><canvas id="c2"></canvas></div></div>
+    </div>
+  </div>
+  <div class="pane" id="pane-ty">
+    <div class="card"><div class="card-title">Collections by Country × Type (USD)</div><div class="legend" id="lg2"></div><div style="position:relative;height:280px"><canvas id="c3"></canvas></div></div>
+    <div id="tyDetail"></div>
+  </div>
+  <div class="pane" id="pane-co">
+    <div class="card"><div class="card-title">Collections by Country (USD)</div><div id="cWrap" style="position:relative"><canvas id="c4"></canvas></div></div>
+  </div>
+
+  <div class="pane" id="pane-ti">
+    <div class="logic-note">
+      <strong>Payment Timing Logic</strong><br>
+      · <strong>Has Due Date</strong> → compared directly against due date<br>
+      · <strong>No Due Date</strong> → compared by Transaction Date month:
+      same month = <span style="color:#085041;font-weight:500">Early</span> &nbsp;·&nbsp;
+      previous month = <span style="color:#0C447C;font-weight:500">On Time</span> &nbsp;·&nbsp;
+      2+ months ago = <span style="color:#712B13;font-weight:500">Late</span><br>
+      · <strong>Ref Date</strong> column shows which date was used (Due / Txn)
+    </div>
+    <div class="filter-row">
+      <select id="sf" onchange="renderTiming()">
+        <option value="all">All Transactions</option>
+        <option value="early">Paid Early</option>
+        <option value="ontime">Paid On Time</option>
+        <option value="late">Paid Late</option>
+        <option value="unmatched">Unmatched</option>
+      </select>
+      <select id="tf" onchange="renderTiming()">
+        <option value="all">All Types</option>
+        <option value="Media">Media</option>
+        <option value="ESS">ESS</option>
+      </select>
+    </div>
+    <div class="metric-grid" id="timingMetrics"></div>
+    <div class="scroll-table" id="timingTable"></div>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbzftTdSJKAUy8kA1T1iwyRN0ejN7S7tU1fdDy6JbEQAAT6_VH13P4aSvprD2Xs495qP/exec';
+
+const charts = {};
+let rows = [], billing = {}, pivot = [], targets = [];
+
+function fmt(n){const a=Math.abs(n),s=n<0?'-':'';if(a>=1e6)return s+'$'+(a/1e6).toFixed(2)+'M';if(a>=1e3)return s+'$'+(a/1e3).toFixed(1)+'K';return s+'$'+a.toFixed(0);}
+function fmtFull(n){return(n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function monthDiff(payStr, refStr){
+  if(!payStr||!refStr) return null;
+  const [py,pm]=payStr.slice(0,7).split('-').map(Number);
+  const [ry,rm]=refStr.slice(0,7).split('-').map(Number);
+  return (py-ry)*12+(pm-rm);
+}
+
+async function fetchData(){
+  const res = await fetch(API_URL+'?callback=_cb&t='+Date.now(),{redirect:'follow'});
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const text = await res.text();
+  const match = text.match(/_cb\(([\s\S]*)\);?\s*$/);
+  if(!match) throw new Error('Unexpected response format');
+  return JSON.parse(match[1]);
+}
+
+async function loadData(){
+  const btn=document.getElementById('syncBtn'),dot=document.getElementById('statusDot'),
+        st=document.getElementById('statusText'),eb=document.getElementById('errBox');
+  btn.disabled=true; document.getElementById('syncIcon').classList.add('spin');
+  dot.className='dot loading'; st.textContent='Syncing...'; eb.style.display='none';
+  try{
+    const data=await fetchData();
+    rows=data.rows||[]; billing=data.billing||{}; targets=data.targets||[];
+    const byTC={};
+    rows.forEach(r=>{const k=(r.type||'—')+'|'+(r.country||'—');byTC[k]=(byTC[k]||0)+r.usd;});
+    pivot=Object.entries(byTC).map(([k,v])=>{const[type,country]=k.split('|');return{type,country,usd:v};});
+    destroyCharts();
+    renderTargetBanner();renderMetrics();renderTypeChart();renderTrendChart();
+    renderTypeCountry();renderCountry();renderTiming();
+    dot.className='dot';
+    st.textContent='Synced · '+new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  }catch(e){
+    dot.className='dot err'; st.textContent='Sync failed'; eb.style.display='block';
+    eb.innerHTML='<strong>⚠ Load failed: </strong>'+e.message+
+      '<br><br><strong>Requires https:// URL.</strong> Use: <code>python3 -m http.server 8080</code> '+
+      'then open <a href="http://localhost:8080/collection_dashboard.html" target="_blank" style="color:var(--blue)">localhost:8080/collection_dashboard.html</a>';
+  }finally{btn.disabled=false;document.getElementById('syncIcon').classList.remove('spin');}
+}
+
+function destroyCharts(){Object.values(charts).forEach(c=>c.destroy());Object.keys(charts).forEach(k=>delete charts[k]);}
+function isDark(){return window.matchMedia('(prefers-color-scheme:dark)').matches;}
+function gridColor(){return isDark()?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)';}
+function tickColor(){return isDark()?'#a09f9b':'#6b6b67';}
+
+function renderTargetBanner(){
+  const banner=document.getElementById('targetBanner');
+  if(!targets.length){banner.style.display='none';return;}
+  const t=targets[targets.length-1];
+  const total=pivot.reduce((a,b)=>a+b.usd,0);
+  const net=total-(t.adjustment||0);
+  const pct=t.target>0?(net/t.target*100):0;
+  let ml=String(t.month);
+  if(ml.length===6){const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];ml=mo[parseInt(ml.slice(4,6))-1]+' '+ml.slice(0,4);}
+  document.getElementById('bannerMonth').textContent=ml;
+  document.getElementById('bannerCollected').textContent=fmt(total);
+  document.getElementById('bannerAdjNote').textContent=t.adjustment?'Adj: −'+fmt(t.adjustment)+' → Net: '+fmt(net):'No adjustment';
+  document.getElementById('bannerTarget').textContent=fmt(t.target);
+  document.getElementById('bannerPct').textContent=pct.toFixed(1)+'%';
+  document.getElementById('bannerPct').className=pct>=80?'c-good':pct>=50?'c-warn':'c-danger';
+  document.getElementById('bannerFill').style.width=Math.min(pct,100)+'%';
+  document.getElementById('bannerFill').style.background=pct>=80?'#1D9E75':pct>=50?'#BA7517':'#D85A30';
+  banner.style.display='flex';
+}
+
+function renderMetrics(){
+  const total=pivot.reduce((a,b)=>a+b.usd,0);
+  const media=pivot.filter(r=>r.type==='Media').reduce((a,b)=>a+b.usd,0);
+  const ess=pivot.filter(r=>r.type==='ESS').reduce((a,b)=>a+b.usd,0);
+  document.getElementById('metricGrid').innerHTML=`
+    <div class="metric"><div class="metric-label">Total Collected (USD)</div><div class="metric-value">${fmt(total)}</div><div class="metric-sub">${rows.length} positive transactions</div></div>
+    <div class="metric"><div class="metric-label">Media</div><div class="metric-value">${fmt(media)}</div><div class="metric-sub">${(media/total*100).toFixed(1)}% of total</div></div>
+    <div class="metric"><div class="metric-label">ESS</div><div class="metric-value">${fmt(ess)}</div><div class="metric-sub">${(ess/total*100).toFixed(1)}% of total</div></div>
+    <div class="metric"><div class="metric-label">Active Markets</div><div class="metric-value">${new Set(pivot.map(r=>r.country)).size}</div><div class="metric-sub">countries / regions</div></div>`;
+}
+
+function renderTypeChart(){
+  const media=pivot.filter(r=>r.type==='Media').reduce((a,b)=>a+b.usd,0);
+  const ess=pivot.filter(r=>r.type==='ESS').reduce((a,b)=>a+b.usd,0);
+  document.getElementById('lg1').innerHTML=`<span><span class="leg-sq" style="background:#378ADD"></span>Media ${fmt(media)}</span><span><span class="leg-sq" style="background:#1D9E75"></span>ESS ${fmt(ess)}</span>`;
+  charts.c1=new Chart(document.getElementById('c1'),{type:'bar',data:{labels:['Media','ESS'],datasets:[{data:[media,ess],backgroundColor:['#378ADD','#1D9E75'],borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>fmt(v.raw)}}},scales:{y:{ticks:{callback:v=>fmt(v),color:tickColor()},grid:{color:gridColor()}},x:{ticks:{color:tickColor()},grid:{display:false}}}}});
+}
+function renderTrendChart(){
+  const byD={};rows.forEach(r=>{byD[r.date]=(byD[r.date]||0)+r.usd;});const dates=Object.keys(byD).sort();
+  charts.c2=new Chart(document.getElementById('c2'),{type:'line',data:{labels:dates.map(d=>d.slice(5)),datasets:[{data:dates.map(d=>byD[d]),borderColor:'#534AB7',backgroundColor:'rgba(83,74,183,0.09)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#534AB7',fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>fmt(v.raw)}}},scales:{y:{ticks:{callback:v=>fmt(v),color:tickColor()},grid:{color:gridColor()}},x:{ticks:{autoSkip:true,maxRotation:45,color:tickColor()},grid:{display:false}}}}});
+}
+function renderTypeCountry(){
+  const countries=[...new Set(pivot.map(d=>d.country))].sort((a,b)=>pivot.filter(d=>d.country===b).reduce((s,d)=>s+d.usd,0)-pivot.filter(d=>d.country===a).reduce((s,d)=>s+d.usd,0));
+  document.getElementById('lg2').innerHTML=`<span><span class="leg-sq" style="background:#378ADD"></span>Media</span><span><span class="leg-sq" style="background:#1D9E75"></span>ESS</span>`;
+  charts.c3=new Chart(document.getElementById('c3'),{type:'bar',data:{labels:countries,datasets:[{label:'Media',data:countries.map(c=>pivot.find(d=>d.type==='Media'&&d.country===c)?.usd||0),backgroundColor:'#378ADD',stack:'s'},{label:'ESS',data:countries.map(c=>pivot.find(d=>d.type==='ESS'&&d.country===c)?.usd||0),backgroundColor:'#1D9E75',stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>v.dataset.label+': '+fmt(v.raw)}}},scales:{x:{stacked:true,ticks:{color:tickColor()},grid:{display:false}},y:{stacked:true,ticks:{callback:v=>fmt(v),color:tickColor()},grid:{color:gridColor()}}}}});
+  document.getElementById('tyDetail').innerHTML=`<div class="scroll-table"><table><thead><tr><th>Country</th><th style="text-align:right">Media (USD)</th><th style="text-align:right">ESS (USD)</th><th style="text-align:right">Total (USD)</th></tr></thead><tbody>${countries.map(c=>{const m=pivot.find(d=>d.type==='Media'&&d.country===c)?.usd||0,e=pivot.find(d=>d.type==='ESS'&&d.country===c)?.usd||0;return`<tr><td style="font-weight:500">${c}</td><td style="text-align:right">${fmt(m)}</td><td style="text-align:right">${fmt(e)}</td><td style="text-align:right;font-weight:500">${fmt(m+e)}</td></tr>`;}).join('')}</tbody></table></div>`;
+}
+function renderCountry(){
+  const byC={};pivot.forEach(r=>{byC[r.country]=(byC[r.country]||0)+r.usd;});const sorted=Object.entries(byC).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('cWrap').style.height=Math.max(260,sorted.length*44+80)+'px';
+  const cols=['#378ADD','#1D9E75','#534AB7','#D85A30','#BA7517','#888780','#D4537E','#5DCAA5','#AFA9EC','#EF9F27'];
+  charts.c4=new Chart(document.getElementById('c4'),{type:'bar',data:{labels:sorted.map(d=>d[0]),datasets:[{data:sorted.map(d=>d[1]),backgroundColor:sorted.map((_,i)=>cols[i%cols.length]),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>fmt(v.raw)}}},scales:{x:{ticks:{callback:v=>fmt(v),color:tickColor()},grid:{color:gridColor()}},y:{ticks:{color:tickColor()},grid:{display:false}}}}});
+}
+
+// ── Payment Timing ────────────────────────────────────────────────────
+// Returns one of 4 unified statuses: early / ontime / late / unmatched
+function getStatus(r){
+  const b = billing[r.txn]; // { dueDate, txnDate } or undefined
+
+  // Has due date → compare directly
+  if(b && b.dueDate){
+    const diff = Math.round((new Date(r.date)-new Date(b.dueDate))/864e5);
+    return { status: diff<0?'early': diff===0?'ontime':'late', days: diff, refDate: b.dueDate, refLabel:'Due' };
+  }
+
+  // No due date → use transaction date with month logic
+  if(b && b.txnDate){
+    const md = monthDiff(r.date, b.txnDate);
+    let status;
+    if(md===0)      status='early';
+    else if(md===1) status='ontime';
+    else            status='late';
+    return { status, days: null, refDate: b.txnDate, refLabel:'Txn' };
+  }
+
+  // Not found in Billing Detail at all
+  return { status:'unmatched', days: null, refDate:'—', refLabel:'—' };
+}
+
+function getBadge(s){
+  if(s.status==='early')     return s.days!=null
+    ? `<span class="badge b-early">Early ${Math.abs(s.days)}d</span>`
+    : `<span class="badge b-early">Paid Early</span>`;
+  if(s.status==='ontime')    return `<span class="badge b-ontime">On Time</span>`;
+  if(s.status==='late')      return s.days!=null
+    ? `<span class="badge b-late">Late ${s.days}d</span>`
+    : `<span class="badge b-late">Paid Late</span>`;
+  return `<span class="badge b-nodue">Unmatched</span>`;
+}
+
+function renderTiming(){
+  const sf=document.getElementById('sf').value, tf=document.getElementById('tf').value;
+  const enriched=rows.map(r=>({...r,...getStatus(r)}));
+
+  const early     = enriched.filter(r=>r.status==='early');
+  const ontime    = enriched.filter(r=>r.status==='ontime');
+  const late      = enriched.filter(r=>r.status==='late');
+  const unmatched = enriched.filter(r=>r.status==='unmatched');
+  const sum = arr => arr.reduce((a,b)=>a+b.usd,0);
+
+  document.getElementById('timingMetrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Paid Early</div><div class="metric-value c-good">${early.length}</div><div class="metric-sub">${fmt(sum(early))} USD</div></div>
+    <div class="metric"><div class="metric-label">Paid On Time</div><div class="metric-value">${ontime.length}</div><div class="metric-sub">${fmt(sum(ontime))} USD</div></div>
+    <div class="metric"><div class="metric-label">Paid Late</div><div class="metric-value c-danger">${late.length}</div><div class="metric-sub">${fmt(sum(late))} USD</div></div>
+    <div class="metric"><div class="metric-label">Unmatched</div><div class="metric-value">${unmatched.length}</div><div class="metric-sub">${fmt(sum(unmatched))} USD</div></div>`;
+
+  let fl=enriched;
+  if(sf!=='all') fl=fl.filter(r=>r.status===sf);
+  if(tf!=='all') fl=fl.filter(r=>r.type===tf);
+  fl.sort((a,b)=>a.date<b.date?1:-1);
+
+  const tblRows=fl.map(r=>{
+    const name=r.cust||r.customer||'';
+    return `<tr>
+      <td>${r.date}</td>
+      <td style="font-size:11px;color:var(--text2)">${r.txn}</td>
+      <td title="${name}">${name.length>18?name.slice(0,18)+'…':name}</td>
+      <td>${r.type}</td>
+      <td style="text-align:right">${fmtFull(r.usd)}</td>
+      <td><span style="font-size:10px;color:var(--text3);margin-right:3px">${r.refLabel}</span>${r.refDate}</td>
+      <td>${getBadge(r)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('timingTable').innerHTML=`
+    <table><thead><tr>
+      <th>Pay Date</th><th>Transaction #</th><th>Customer</th><th>Type</th>
+      <th style="text-align:right">USD</th><th>Ref Date</th><th>Status</th>
+    </tr></thead>
+    <tbody>${tblRows||'<tr><td colspan="7" class="empty">No transactions match your filter</td></tr>'}</tbody>
+    </table>`;
+}
+
+function switchTab(name){
+  const names=['ov','ty','co','ti'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',names[i]===name));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pane-'+name).classList.add('on');
+}
+
+loadData();
+</script>
+</body>
+</html>
